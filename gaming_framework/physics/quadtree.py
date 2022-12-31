@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
-from gaming_framework.geometry.point import Point2D
-from gaming_framework.geometry.rectangle import Rectangle
+from gaming_framework.geometry.shape import Point2D, Rectangle
 from gaming_framework.system.events import EventPublisher
 
 

@@ -1,6 +1,5 @@
 from gaming_framework.geometry.collision import point_to_rectangle_collision
-from gaming_framework.geometry.point import Point2D
-from gaming_framework.geometry.rectangle import Rectangle
+from gaming_framework.geometry.shape import Point2D, Rectangle
 
 
 def test_point_is_inside_rectangle():

@@ -3,9 +3,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from gaming_framework.geometry.point import Point2D
-from gaming_framework.geometry.polygon import Polygon
-from gaming_framework.geometry.rectangle import Rectangle
+from gaming_framework.geometry.shape import Point2D, Rectangle
 from gaming_framework.physics.body import Body
 from gaming_framework.physics.body_pair import BodyPair
 from gaming_framework.physics.collision_shape import CollisionShape
@@ -28,46 +26,35 @@ class World:
     def __eq__(self, other):
         return id(self) == id(other)
 
-    def __calculate_sweept_body(self, body, old_pos, new_pos):
-        rectangle = body.bounding_box
-        dx = new_pos.x - old_pos.x
-        dy = new_pos.y - old_pos.y
-        new_points = [point for point in rectangle.points]
-        old_points = [Point2D(point.x + dx, point.y + dy) for point in new_points]
-        polygon_points = new_points + old_points
-        maxx = max(point.x for point in polygon_points)
-        minx = min(point.x for point in polygon_points)
-        maxy = max(point.y for point in polygon_points)
-        miny = min(point.y for point in polygon_points)
-        cx = (maxx + minx) / 2
-        cy = (maxy + miny) / 2
-        polygon_points = sorted(
-            [
-                point
-                for point in polygon_points
-                if not ((minx < point.x < maxx) and (miny < point.y < maxy))
-            ],
-            key=lambda point: np.arctan2(point.y - cy, point.x - cx),
-        )
-        polygon = Polygon(polygon_points)
-        collision_shape = CollisionShape(body.position, polygon)
-        return Body(collision_shape)
+    def __calculate_sweept_body(self, body: Body, new_pos: Point2D):
+        top = body.bounding_box.center + body.bounding_box.radius
+        left = body.bounding_box.center - body.bounding_box.radius
+        bottom = new_pos.center - body.bounding_box.radius
+        right = new_pos.center + body.bounding_box.radius
+        top_left = Point2D(left, top)
+        bottom_right = Point2D(right, bottom)
+        sweept_shape = Rectangle(top_left, bottom_right)
+        collision_shape = CollisionShape(sweept_shape)
+        sweept_body = Body(collision_shape)
+        return sweept_body
 
-    def __time_of_moving_collision(self, body_a, body_b, delta_time):
-        # 1: check where in time the collision might have occurred
-        time_of_collision = 0
+    def __time_of_collision(self, body_a: Body, body_b: Body):
+        distance = body_a.position.distance(body_b.position)
+        squared_speed_body_a = body_a.speed.x**2 + body_a.speed.y**2
+        squared_accel_body_a = body_a.acceleration.x**2 + body_a.acceleration.y**2
+        squared_speed_body_b = body_b.speed.x**2 + body_b.speed.y**2
+        squared_accel_body_b = body_b.acceleration.x**2 + body_b.acceleration.y**2
+
+        delta_speed = abs(squared_speed_body_a - squared_speed_body_b)
+        delta_accel = abs(squared_accel_body_a - squared_accel_body_b)
+
+        time_of_collision = np.sqrt((2 * distance * delta_speed) / delta_accel)
+
         return time_of_collision
 
-    def __time_of_static_collision(self, moving_body, static_body, delta_time):
-        # 1: check where in time the collision might have occurred
-        time_of_collision = 0
-        return time_of_collision
-
-    def __push_to_collision_candidates(
-        self, pair, start_time, delta_time, toc_callback
-    ):
-        toc = toc_callback(pair.body_a, pair.body_b, delta_time)
-        if start_time <= toc <= (start_time + delta_time):
+    def __push_to_collision_candidates(self, pair, delta_time, start_time):
+        toc = self.__time_of_collision(pair.body_a, pair.body_b, delta_time)
+        if toc <= (start_time + delta_time):
             heapq.heappush(self.collision_candidates, (toc, pair))
 
     def __remove_moving_body(self, body):
@@ -84,11 +71,10 @@ class World:
 
     def __predict_movement(self, body, delta_time):
         new_pos = body.predict_position(delta_time)
-        old_pos = body.position
-        if new_pos == old_pos:
+        if new_pos == body.position:
             return
-        sweept_body = self.__calculate_sweept_body(body, old_pos, new_pos)
-        self.moving_bodies[body] = (old_pos, new_pos, sweept_body)
+        sweept_body = self.__calculate_sweept_body(body, new_pos)
+        self.moving_bodies[body] = (body.position, new_pos, sweept_body)
         self.sweept_bodies[sweept_body] = body
         self.movement_quadtree.insert(sweept_body)
 
@@ -100,13 +86,10 @@ class World:
             for sweept_body_b in self.movement_quadtree.query(sweept_body.shape)
             if (sweept_body != sweept_body_b)
             and (body != self.sweept_bodies[sweept_body_b])
-            and sweept_body.shape.collides_with(sweept_body_b.shape)
         ):
             if candidate not in pairs:
                 pairs.append(candidate)
-                self.__push_to_collision_candidates(
-                    candidate, start_time, delta_time, self.__time_of_moving_collision
-                )
+                self.__push_to_collision_candidates(candidate, delta_time, start_time)
 
     def __query_collisions_with_static_bodies(self, body, delta_time, start_time):
         (_, _, sweept_body) = self.moving_bodies[body]
@@ -115,13 +98,10 @@ class World:
             BodyPair(body, static_body)
             for static_body in self.quadtree.query(sweept_body.shape)
             if (static_body not in self.moving_bodies)
-            and (sweept_body.shape.collides_with(static_body.bounding_box))
         ):
             if candidate not in pairs:
                 pairs.append(candidate)
-                self.__push_to_collision_candidates(
-                    candidate, start_time, delta_time, self.__time_of_static_collision
-                )
+                self.__push_to_collision_candidates(candidate, delta_time, start_time)
 
     def __update_collision_candidates(self, body, delta_time, start_time):
         if body not in self.moving_bodies:
@@ -139,26 +119,73 @@ class World:
         self.__update_collision_candidates(body_a, remaining_time, current_time)
         self.__update_collision_candidates(body_b, remaining_time, current_time)
 
-    def __resolve_collision(self, body_a, body_b, current_time, end_time):
+    def __update_body_forces(self, body_a, body_b):
+        v1 = (
+            body_a.mass * body_a.speed
+            + body_b.mass * body_b.speed
+            + body_b.mass * (body_b.speed - body_a.speed)
+        ) / (body_a.mass + body_b.mass)
+
+        v2 = (
+            body_a.mass * body_a.speed
+            + body_b.mass * body_b.speed
+            + body_a.mass * (body_a.speed - body_b.speed)
+        ) / (body_a.mass + body_b.mass)
+
+        body_a.speed = v1
+        body_b.speed = v2
+
+    def __update_body_positions(self, body_a: Body, body_b: Body, delta_time: float):
+        position_a = body_a.predict_position(delta_time)
+        displacement_a = position_a - body_a.position
+        displacement_a = displacement_a / np.linalg.norm(displacement_a)
+        position_b = body_b.predict_position(delta_time)
+        displacement_b = body_b.predict_position(delta_time) - body_b.position
+        displacement_b = displacement_b / np.linalg.norm(displacement_b)
+        distance = np.linalg.norm(position_a - position_b)
+        distance = (body_a.bounding_box.radius + body_b.bounding_box.radius) - distance
+        distance = distance / 2
+        position_a = Point2D(
+            position_a.x - (displacement_a.x * distance),
+            position_a.y - (displacement_a.y * distance),
+        )
+        position_b = Point2D(
+            position_b.x - (displacement_b.x * distance),
+            position_b.y - (displacement_b.y * distance),
+        )
+        body_a.move_to(position_a)
+        body_b.move_to(position_b)
+
+    def __resolve_collision(
+        self, body_a: Body, body_b: Body, current_time: float, end_time: float
+    ):
         handle_contact = body_a.is_tangible and body_b.is_tangible
         if handle_contact:
-            # move body_a, and body_b to their positions in current_time
-            # update physical forces working on body_a and body_b
+            self.__update_body_positions(body_a, body_b, current_time)
+            self.__update_body_forces(body_a, body_b)
             self.__handle_contact(body_a, body_b, current_time, end_time)
+
         body_a.handle_collision(body_b)
         body_b.handle_collision(body_a)
 
-    def __check_collision(self, body_a, body_b, current_time, end_time):
+    def __check_collision(
+        self, body_a: Body, body_b: Body, time_of_collision: float, delta_time: float
+    ):
         comparing_shape_a = body_a.shape
         comparing_shape_b = body_b.shape
+
         if body_a in self.moving_bodies:
-            # comparing_shape_a = body_a.shape moved to position at time of collision
-            ...
+            position = body_a.predict_position(time_of_collision)
+            comparing_shape_a = body_a.shape.center_to(position)
+
         if body_b in self.moving_bodies:
-            # comparing_shape_b = body_b.shape moved to position at time of collision
-            ...
+            position = body_b.predict_position(time_of_collision)
+            comparing_shape_b = body_b.shape.center_to(position)
+
         if comparing_shape_a.collides_with(comparing_shape_b):
-            self.__resolve_collision(body_a, body_b, current_time, end_time)
+            self.__resolve_collision(
+                body_a, body_b, current_time=time_of_collision, end_time=delta_time
+            )
 
     def __detect_collisions(self, delta_time):
         while self.collision_candidates:

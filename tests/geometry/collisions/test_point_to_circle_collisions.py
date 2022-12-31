@@ -1,8 +1,7 @@
 import numpy as np
 
-from gaming_framework.geometry.circle import Circle
 from gaming_framework.geometry.collision import point_to_circle_collision
-from gaming_framework.geometry.point import Point2D
+from gaming_framework.geometry.shape import Circle, Point2D
 
 
 def test_point_is_inside_circle():

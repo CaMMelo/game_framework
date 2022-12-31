@@ -1,22 +1,23 @@
 from dataclasses import dataclass
 
-from gaming_framework.geometry.point import Point2D
-from gaming_framework.geometry.shape import Shape
+from gaming_framework.geometry.shape import Point2D, Shape
 
 
 @dataclass
 class CollisionShape:
-    position: Point2D
     shape: Shape
 
     @property
     def bounding_box(self):
         return self.shape.bounding_box
 
+    @property
+    def position(self):
+        return self.shape.center
+
     def set_position(self, position):
         if position == self.position:
             return
-        self.position = position
         self.shape = self.shape.center_to(self.position)
 
     def collides_with(self, collision_shape):

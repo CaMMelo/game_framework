@@ -1,6 +1,5 @@
 from gaming_framework.geometry.collision import point_to_line_collision
-from gaming_framework.geometry.line import Line2D
-from gaming_framework.geometry.point import Point2D
+from gaming_framework.geometry.shape import Line2D, Point2D
 
 
 def test_point_is_colliding_with_line():
