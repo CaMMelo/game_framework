@@ -135,24 +135,11 @@ class World:
         body_a.speed = v1
         body_b.speed = v2
 
-    def __update_body_positions(self, body_a: Body, body_b: Body, delta_time: float):
-        position_a = body_a.predict_position(delta_time)
-        displacement_a = position_a - body_a.position
-        displacement_a = displacement_a / np.linalg.norm(displacement_a)
-        position_b = body_b.predict_position(delta_time)
-        displacement_b = body_b.predict_position(delta_time) - body_b.position
-        displacement_b = displacement_b / np.linalg.norm(displacement_b)
-        distance = np.linalg.norm(position_a - position_b)
-        distance = (body_a.bounding_box.radius + body_b.bounding_box.radius) - distance
-        distance = distance / 2
-        position_a = Point2D(
-            position_a.x - (displacement_a.x * distance),
-            position_a.y - (displacement_a.y * distance),
-        )
-        position_b = Point2D(
-            position_b.x - (displacement_b.x * distance),
-            position_b.y - (displacement_b.y * distance),
-        )
+    def __update_body_positions(self, body_a: Body, body_b: Body, current_time: float):
+        # KKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
+        instant_before = current_time - 0.000000000000001
+        position_a = body_a.predict_position(instant_before)
+        position_b = body_a.predict_position(instant_before)
         body_a.move_to(position_a)
         body_b.move_to(position_b)
 
