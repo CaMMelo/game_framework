@@ -27,10 +27,10 @@ class World:
         return id(self) == id(other)
 
     def __calculate_sweept_body(self, body: Body, new_pos: Point2D):
-        top = body.bounding_box.center + body.bounding_box.radius
-        left = body.bounding_box.center - body.bounding_box.radius
-        bottom = new_pos.center - body.bounding_box.radius
-        right = new_pos.center + body.bounding_box.radius
+        top = body.bounding_box.center.y + body.bounding_box.radius
+        left = body.bounding_box.center.x - body.bounding_box.radius
+        bottom = new_pos.center.y - body.bounding_box.radius
+        right = new_pos.center.x + body.bounding_box.radius
         top_left = Point2D(left, top)
         bottom_right = Point2D(right, bottom)
         sweept_shape = Rectangle(top_left, bottom_right)
@@ -53,7 +53,7 @@ class World:
         return time_of_collision
 
     def __push_to_collision_candidates(self, pair, delta_time, start_time):
-        toc = self.__time_of_collision(pair.body_a, pair.body_b, delta_time)
+        toc = self.__time_of_collision(pair.body_a, pair.body_b)
         if toc <= (start_time + delta_time):
             heapq.heappush(self.collision_candidates, (toc, pair))
 
@@ -77,6 +77,7 @@ class World:
         self.moving_bodies[body] = (body.position, new_pos, sweept_body)
         self.sweept_bodies[sweept_body] = body
         self.movement_quadtree.insert(sweept_body)
+        print(sweept_body, self.movement_quadtree)
 
     def __query_collisions_with_moving_bodies(self, body, delta_time, start_time):
         (_, _, sweept_body) = self.moving_bodies[body]
@@ -135,20 +136,18 @@ class World:
         body_a.speed = v1
         body_b.speed = v2
 
-    def __update_body_positions(self, body_a: Body, body_b: Body, current_time: float):
-        # KKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
-        instant_before = current_time - 0.000000000000001
-        position_a = body_a.predict_position(instant_before)
-        position_b = body_a.predict_position(instant_before)
-        body_a.move_to(position_a)
-        body_b.move_to(position_b)
+    def __update_body_position(self, body: Body, current_time: float):
+        position = body.predict_position(current_time)
+        body.move_to(position)
 
     def __resolve_collision(
         self, body_a: Body, body_b: Body, current_time: float, end_time: float
     ):
         handle_contact = body_a.is_tangible and body_b.is_tangible
         if handle_contact:
-            self.__update_body_positions(body_a, body_b, current_time)
+            instant_before = current_time - 0.000000000000001
+            self.__update_body_position(body_a, instant_before)
+            self.__update_body_position(body_b, instant_before)
             self.__update_body_forces(body_a, body_b)
             self.__handle_contact(body_a, body_b, current_time, end_time)
 
@@ -189,10 +188,10 @@ class World:
         self.sweept_bodies = {}
         self.movement_quadtree = QuadTree(self.quadtree.bounds)
         self.collision_candidates = []
-        for body in self.quadtree.objects():
+        for body in self.quadtree.get_objects():
             self.__predict_movement(body, delta_time)
         for body in self.moving_bodies:
             self.__update_collision_candidates(body, delta_time, start_time=0)
         self.__detect_collisions(delta_time)
-        # must update all remaining moving objects to their final positions
-        ...
+        for body in self.moving_bodies:
+            self.__update_body_position(body, delta_time)

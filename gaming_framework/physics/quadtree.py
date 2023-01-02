@@ -20,7 +20,6 @@ class QuadTreeObject(EventPublisher):
 class QuadTreeNode(EventPublisher):
     bounds: Rectangle
     max_objects: int
-    max_depth: int
     objects: list[QuadTreeObject]
     children: list["QuadTreeNode"]
 
@@ -43,14 +42,12 @@ class QuadTreeNode(EventPublisher):
             return False
         if object in self.objects:
             return False
-        if (len(self.objects) < self.max_objects) or depth >= self.max_depth:
+        if len(self.objects) < self.max_objects:
             self.__subscribe_to_object_events(object)
             self.objects.append(object)
             return True
         if not self.children:
             self.divide()
-        # if the object collides with more than one quadrant I want that object
-        # to be a part of both quadrants, so I insert it in both of them
         inserted = any(
             [child.__insert_rec(object, depth=depth + 1) for child in self.children]
         )
@@ -71,6 +68,7 @@ class QuadTreeNode(EventPublisher):
             object
             for child in self.children
             for object in child.__query_rec(shape, found_objects)
+            if (object not in found_objects)
         )
         yield from found_objects
 
@@ -90,21 +88,8 @@ class QuadTreeNode(EventPublisher):
         return removed
 
     def __move_object_out(self, object, old_pos, new_pos):
-        if self.objects.__remove_rec(object):
+        if self.__remove_rec(object):
             self.publish("object_moved_out", object, old_pos, new_pos)
-
-    def __get_objects(self):
-        objects = self.objects
-        objects.extend(
-            object
-            for child in self.children
-            for object in child.__get_objects()
-            if object not in objects
-        )
-        yield from objects
-
-    def objects(self):
-        yield from self.__get_objects()
 
     def divide(self):
         mid_x = (self.bounds.top_left.x + self.bounds.bottom_right.x) / 2
@@ -127,7 +112,8 @@ class QuadTreeNode(EventPublisher):
             QuadTreeNode(
                 bound,
                 max_objects=self.max_objects,
-                max_depth=self.max_depth,
+                objects=[],
+                children=[],
             )
             for bound in child_bounds
         ]
@@ -156,20 +142,19 @@ class QuadTree(EventPublisher):
         self,
         bounds: Rectangle,
         max_objects: int = 4,
-        max_depth: int = 5,
         objects: list[QuadTreeObject] = None,
         children: list[QuadTreeNode] = None,
     ):
+        super().__init__()
         self.max_objects = max_objects
-        self.max_depth = max_depth
         self.root_node = QuadTreeNode(
             bounds,
             max_objects,
-            max_depth,
             objects or [],
             children or [],
         )
         self.__subscribe_to_node_events(self.root_node)
+        self._objects = []
 
     def __hash__(self):
         return id(self)
@@ -177,17 +162,25 @@ class QuadTree(EventPublisher):
     def __eq__(self, other):
         return id(self) == id(other)
 
+    def __repr__(self) -> str:
+        return (
+            "QuadTree(\n"
+            f"   bounds={self.bounds},\n"
+            f"   max_objects={self.max_objects},\n"
+            ")"
+        )
+
     @property
     def bounds(self):
-        return self.bounds
+        return self.root_node.bounds
 
-    def __handle_object_removed(self, _, object):
+    def __handle_object_removed(self, object):
         self.publish("object_removed", object)
 
-    def __handle_object_moved_out(self, _, object):
+    def __handle_object_moved_out(self, object, old_pos, new_pos):
         self.insert(object)
 
-    def __handle_node_divided(self, _, children):
+    def __handle_node_divided(self, children):
         for child in children:
             self.__subscribe_to_node_events(child)
 
@@ -257,11 +250,7 @@ class QuadTree(EventPublisher):
                 bounds = self.__span_quadrant(quadrant, current_quadrant)
                 children_bounds.append(bounds)
         children = [
-            QuadTreeNode(
-                bound,
-                max_objects=self.max_objects,
-                max_depth=self.max_depth,
-            )
+            QuadTreeNode(bound, max_objects=self.max_objects, objects=[], children=[])
             for bound in children_bounds
         ]
         children.insert(current_quadrant, self.root_node)
@@ -271,23 +260,30 @@ class QuadTree(EventPublisher):
         parent_node = QuadTreeNode(
             parent_bounds,
             max_objects=self.max_objects,
-            max_depth=self.max_depth,
+            objects=[],
             children=children,
         )
         self.root_node = parent_node
 
-    def objects(self):
-        yield from self.root_node.objects()
+    def get_objects(self):
+        yield from self._objects
 
     def insert(self, object):
+        inserted = False
         if self.bounds.collides_with(object.bounding_box):
             self.publish("object_inserted", object)
-            return self.root_node.insert(object)
-        self.__update_bounds(object)
-        return self.insert(object)
+            inserted = self.root_node.insert(object)
+        else:
+            self.__update_bounds(object)
+            inserted = self.root_node.insert(object)
+        if inserted:
+            self._objects.append(object)
+        return inserted
 
     def remove(self, object):
-        self.root_node.remove(object)
+        if self.root_node.remove(object):
+            object_index = self._objects.index(object)
+            del self.objects[object_index]
 
     def query(self, shape):
         yield from self.root_node.query(shape)

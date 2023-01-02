@@ -1,6 +1,9 @@
+from dataclasses import dataclass
+
 from gaming_framework.physics.body import Body
 
 
+@dataclass
 class BodyPair:
     body_a: Body
     body_b: Body

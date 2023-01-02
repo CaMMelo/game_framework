@@ -94,6 +94,12 @@ class Point2D(namedtuple("Point2D", ["x", "y"]), Shape):
     def distance(self, other):
         return np.linalg.norm(np.array(self - other))
 
+    def scalar_mult(self, scalar):
+        return Point2D(self.x * scalar, self.y * scalar)
+
+    def scalar_div(self, scalar):
+        return self.scalar_mult(1 / scalar)
+
 
 class Line2D(namedtuple("Line2D", ["a", "b"]), Shape):
     _center: Point2D = field(init=False, default=None)
@@ -224,6 +230,7 @@ class Rectangle(Shape):
             return self._center
         c = self.top_left + self.bottom_right
         self._center = Point2D(c.x / 2, c.y / 2)
+        return self._center
 
     def center_to(self, point):
         dx = point.x - self.center.x

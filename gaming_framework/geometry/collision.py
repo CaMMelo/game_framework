@@ -92,6 +92,8 @@ def circle_to_circle_collision(circle, other):
 
 
 def circle_to_rectangle_collision(circle, rectangle):
+    if rectangle.top_left.x <= circle.center.x <= rectangle.bottom_right.x:
+        return rectangle.bottom_right.y <= circle.center.y <= rectangle.top_left.y
     testx, testy = circle.center
     if circle.center.x < rectangle.top_left.x:
         testx = rectangle.top_left.x
@@ -101,7 +103,7 @@ def circle_to_rectangle_collision(circle, rectangle):
         testy = rectangle.top_left.y
     if circle.center.y > rectangle.bottom_right.y:
         testy = rectangle.bottom_right.y
-    distance = np.linalg.norm(circle.center - (testx, testy))
+    distance = np.linalg.norm(np.array(circle.center) - np.array((testx, testy)))
     return distance <= circle.radius
 
 

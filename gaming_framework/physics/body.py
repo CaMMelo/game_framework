@@ -34,11 +34,21 @@ class Body(QuadTreeObject):
     def __eq__(self, other):
         return id(self) == id(other)
 
+    def __repr__(self) -> str:
+        return (
+            "Body(\n"
+            f"  collision_shape={self.collision_shape},\n"
+            f"  speed={self.speed},\n"
+            f"  acceleration={self.acceleration},\n"
+            f"  mass={self.mass},\n"
+            f"  is_static={self.is_static},\n"
+            f"  is_tangible={self.is_tangible},\n"
+            ")"
+        )
+
     @property
     def position(self):
-        x = self.collision_shape.position.x
-        y = self.collision_shape.position.y
-        return Vector2D(x, y)
+        return self.collision_shape.position
 
     @property
     def bounding_box(self):
@@ -60,7 +70,7 @@ class Body(QuadTreeObject):
     def move_to(self, position):
         old_position = self.position
         self.set_position(position)
-        self.publish("moved_to", old_position, position)
+        self.publish("moved_to", self, old_position, position)
 
     def update(self, delta_time):
         if self.is_static:

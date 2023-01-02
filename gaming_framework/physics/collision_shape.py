@@ -18,7 +18,7 @@ class CollisionShape:
     def set_position(self, position):
         if position == self.position:
             return
-        self.shape = self.shape.center_to(self.position)
+        self.shape = self.shape.center_to(position)
 
     def collides_with(self, collision_shape):
         return self.shape.collides_with(collision_shape.shape)
