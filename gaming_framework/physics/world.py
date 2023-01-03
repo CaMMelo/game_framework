@@ -77,7 +77,6 @@ class World:
         self.moving_bodies[body] = (body.position, new_pos, sweept_body)
         self.sweept_bodies[sweept_body] = body
         self.movement_quadtree.insert(sweept_body)
-        print(sweept_body, self.movement_quadtree)
 
     def __query_collisions_with_moving_bodies(self, body, delta_time, start_time):
         (_, _, sweept_body) = self.moving_bodies[body]

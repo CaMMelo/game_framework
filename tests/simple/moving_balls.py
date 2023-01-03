@@ -36,7 +36,7 @@ area = Rectangle(Point2D(0, height), Point2D(width, 0))
 quadtree = QuadTree(area)
 world = World(area, quadtree)
 
-circles = [Circle(Point2D(i * 20 + 20, i * 20 + 20), 10) for i in range(2)]
+circles = [Circle(Point2D(i * 20 + 20, i * 20 + 20), 10) for i in range(10)]
 bodies = [
     Body(
         collision_shape=CollisionShape(circle),
@@ -59,7 +59,7 @@ import pygame
 pygame.init()
 
 
-screen = pygame.display.set_mode(size)
+screen = pygame.display.set_mode((width * 2, height * 2))
 clock = pygame.time.Clock()
 
 
