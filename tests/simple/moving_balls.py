@@ -1,14 +1,16 @@
+import itertools
+import sys
+from random import randint
 from uuid import uuid4
+
+import pygame
+
 from gaming_framework.geometry.shape import Circle, Point2D, Rectangle
 from gaming_framework.physics.body import Body, CollisionHandler
 from gaming_framework.physics.collision_shape import CollisionShape
 from gaming_framework.physics.spatial_hash import SpatialHash
 from gaming_framework.physics.vector import Vector2D
 from gaming_framework.physics.world import World
-from random import randint
-import sys
-
-import pygame
 
 size = width, height = 320, 240
 
@@ -52,15 +54,16 @@ class Ball(CollisionHandler):
         )
 
 
-import itertools
+
 
 area = Rectangle(Point2D(0, height), Point2D(width, 0))
 quadtree = SpatialHash(area)
 world = World(area, quadtree)
 
 circles = []
-ncols = 10
+ncols = 6
 nlines = 5
+speed_factor = 1/4
 w = width / ncols
 h = height / nlines
 for col, line in itertools.product(range(ncols), range(nlines)):
@@ -71,8 +74,8 @@ bodies = [
     Body(
         collision_shape=CollisionShape(circle),
         speed=Vector2D(
-            (randint(500, 600) / circle.radius) * (-1) ** randint(0, 1),
-            (randint(500, 600) / circle.radius) * (-1) ** randint(0, 1),
+            (randint(500, 600) / circle.radius) * (-1) ** randint(0, 1) * speed_factor,
+            (randint(500, 600) / circle.radius) * (-1) ** randint(0, 1) * speed_factor,
         ),
         mass=circle.radius,
     )

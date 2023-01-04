@@ -76,19 +76,16 @@ class World:
             heapq.heappush(self.collision_candidates, (toc, pair))
 
     def __remove_moving_body(self, body):
+        if body not in self.moving_bodies:
+            return
         (_, _, sweept_body) = self.moving_bodies[body]
         del self.moving_bodies[body]
         del self.sweept_bodies[sweept_body]
         self.movement_spatial_hash.remove(sweept_body)
-        self.collision_candidates = list(
-            filter(
-                lambda candidate: (candidate[1].body_a == body)
-                or (candidate[1].body_b == body),
-                self.collision_candidates,
-            )
-        )
 
     def __predict_movement(self, body, delta_time):
+        if body.is_static:
+            return
         new_pos = body.predict_position(delta_time)
         if new_pos == body.position:
             return
@@ -131,7 +128,6 @@ class World:
     def __handle_contact(self, body_a, body_b, current_time, end_time):
         self.__remove_moving_body(body_a)
         self.__remove_moving_body(body_b)
-        heapq.heapify(self.collision_candidates)
         remaining_time = end_time - current_time
         self.__predict_movement(body_a, remaining_time)
         self.__predict_movement(body_b, remaining_time)
@@ -147,20 +143,27 @@ class World:
             + body_b.speed.scalar_mult(body_b.mass)
             + (body_a.speed - body_b.speed).scalar_mult(body_b.mass)
         ).scalar_div(body_a.mass + body_b.mass)
-        body_a.speed = v1
-        body_b.speed = v2
+
+        if not body_a.is_static:
+            body_a.speed = v1
+        if not body_b.is_static:
+            body_b.speed = v2
 
     def __resolve_collision(
         self,
         body_a: Body,
         body_b: Body,
+        time_of_collision: float,
         current_time: float,
         end_time: float,
     ):
         handle_contact = body_a.is_tangible and body_b.is_tangible
         if handle_contact:
-            body_a.update(current_time - 0.01)
-            body_b.update(current_time - 0.01)
+            time_diff = 0
+            if time_of_collision == 0:
+                time_diff = 1e-2
+            body_a.update(current_time - time_diff)
+            body_b.update(current_time - time_diff)
             self.__update_body_forces(body_a, body_b)
             self.__handle_contact(body_a, body_b, current_time, end_time)
         body_a.handle_collision(body_b)
@@ -187,6 +190,7 @@ class World:
             self.__resolve_collision(
                 body_a,
                 body_b,
+                time_of_collision,
                 current_time,
                 end_time,
             )
