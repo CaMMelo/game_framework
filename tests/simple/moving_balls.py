@@ -8,7 +8,7 @@ from gaming_framework.physics.quadtree import QuadTree
 from gaming_framework.physics.vector import Vector2D
 from gaming_framework.physics.world import World
 
-size = width, height = 320, 240
+size = width, height = 320 * 2, 240 * 2
 
 
 class Ball:
@@ -31,16 +31,26 @@ class Ball:
         if self.body.position.y - self.body.shape.radius <= 0:
             self.body.speed = Vector2D(self.body.speed.x, -self.body.speed.y)
 
+import itertools
 
 area = Rectangle(Point2D(0, height), Point2D(width, 0))
 quadtree = QuadTree(area)
 world = World(area, quadtree)
 
-circles = [Circle(Point2D(i * 20 + 20, i * 20 + 20), 10) for i in range(10)]
+circles = []
+radius = 4
+nrows = 10
+nlines = 10
+for row, line in itertools.product(range(nrows), range(nlines)):
+    dx = width / nrows
+    dy = height / nlines
+    center = Point2D(row*dx/2, line*dy/2)
+    circle = Circle(center, radius)
+    circles.append(circle)
 bodies = [
     Body(
         collision_shape=CollisionShape(circle),
-        speed=Vector2D(randint(20, 40), randint(20, 40)),
+        speed=Vector2D(randint(200, 400), randint(200, 400)),
     )
     for circle in circles
 ]
@@ -59,7 +69,7 @@ import pygame
 pygame.init()
 
 
-screen = pygame.display.set_mode((width * 2, height * 2))
+screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 
 
@@ -79,7 +89,7 @@ def draw_quadtree(node):
 previous_tick = 0
 while True:
     current_tick = pygame.time.get_ticks()
-    delta_time = (current_tick - previous_tick) / 60
+    delta_time = (current_tick - previous_tick) / 1000
     previous_tick = current_tick
 
     for event in pygame.event.get():
