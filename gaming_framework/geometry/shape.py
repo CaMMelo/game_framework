@@ -22,6 +22,26 @@ from gaming_framework.geometry.collision import (
 )
 
 
+class ShapeVisitor:
+    def accept_point(self, point: "Point2D"):
+        raise NotImplementedError()
+
+    def accept_line(self, line: "Line2D"):
+        raise NotImplementedError()
+
+    def accept_circle(self, circle: "Circle"):
+        raise NotImplementedError()
+
+    def accept_rectangle(self, rectangle: "Rectangle"):
+        raise NotImplementedError()
+
+    def accept_polygon(self, polygon: "Polygon"):
+        raise NotImplementedError()
+    
+    def visit(self, shape: "Shape"):
+        return shape.accept_shape_visitor(self)
+
+
 class Shape:
     def __hash__(self):
         return id(self)
@@ -30,7 +50,7 @@ class Shape:
         return id(self) == id(other)
 
     @property
-    def bounding_box(self):
+    def bounding_box(self) -> "Shape":
         raise NotImplementedError()
 
     def center_to(self, point):
@@ -52,6 +72,9 @@ class Shape:
         raise NotImplementedError()
 
     def collides_with(self, shape):
+        raise NotImplementedError()
+
+    def accept_shape_visitor(self, visitor):
         raise NotImplementedError()
 
 
@@ -90,6 +113,9 @@ class Point2D(namedtuple("Point2D", ["x", "y"]), Shape):
 
     def collides_with(self, shape):
         return shape.point_collision(self)
+
+    def accept_shape_visitor(self, visitor: ShapeVisitor):
+        return visitor.accept_point(self)
 
     def distance(self, other):
         return np.linalg.norm(np.array(self - other))
@@ -153,6 +179,9 @@ class Line2D(namedtuple("Line2D", ["a", "b"]), Shape):
     def collides_with(self, shape):
         return shape.line_collision(self)
 
+    def accept_shape_visitor(self, visitor: ShapeVisitor):
+        return visitor.accept_line(self)
+
 
 @dataclass
 class Circle(Shape):
@@ -183,6 +212,9 @@ class Circle(Shape):
 
     def collides_with(self, shape):
         return shape.circle_collision(self)
+
+    def accept_shape_visitor(self, visitor: ShapeVisitor):
+        return visitor.accept_circle(self)
 
 
 @dataclass
@@ -232,6 +264,14 @@ class Rectangle(Shape):
         self._center = Point2D(c.x / 2, c.y / 2)
         return self._center
 
+    @property
+    def width(self):
+        return self.bottom_right.x - self.top_left.x
+
+    @property
+    def height(self):
+        return self.top_left.y - self.bottom_right.y
+
     def center_to(self, point):
         dx = point.x - self.center.x
         dy = point.y - self.center.y
@@ -260,6 +300,9 @@ class Rectangle(Shape):
 
     def collides_with(self, shape):
         return shape.rectangle_collision(self)
+
+    def accept_shape_visitor(self, visitor: ShapeVisitor):
+        return visitor.accept_rectangle(self)
 
 
 @dataclass
@@ -324,3 +367,6 @@ class Polygon(Shape):
 
     def collides_with(self, shape):
         return shape.polygon_collision(self)
+
+    def accept_shape_visitor(self, visitor: ShapeVisitor):
+        return visitor.accept_polygon(self)

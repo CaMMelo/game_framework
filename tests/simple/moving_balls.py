@@ -1,25 +1,28 @@
-from random import randint
 from uuid import uuid4
-
 from gaming_framework.geometry.shape import Circle, Point2D, Rectangle
-from gaming_framework.physics.body import Body
+from gaming_framework.physics.body import Body, CollisionHandler
 from gaming_framework.physics.collision_shape import CollisionShape
-from gaming_framework.physics.quadtree import QuadTree
+from gaming_framework.physics.spatial_hash import SpatialHash
 from gaming_framework.physics.vector import Vector2D
 from gaming_framework.physics.world import World
+from random import randint
+import sys
 
-size = width, height = 320 * 2, 240 * 2
+import pygame
+
+size = width, height = 320, 240
 
 
-class Ball:
+class Ball(CollisionHandler):
     def __init__(self, body: Body):
         self.body = body
         self.body.collision_handler = self
         self.collision_resolution_method_name = "resolve_collision_with_ball"
         self.id = uuid4()
+        self.color = (255, 255, 255)
 
     def resolve_collision_with_ball(self, other):
-        print(f"{self.id} collides with {other.id}")
+        self.color = (255, 0, 0) if self.color == (255, 255, 255) else (255, 255, 255)
 
     def update(self, delta_time):
         if self.body.position.x + self.body.shape.radius >= width:
@@ -30,60 +33,61 @@ class Ball:
             self.body.speed = Vector2D(self.body.speed.x, -self.body.speed.y)
         if self.body.position.y - self.body.shape.radius <= 0:
             self.body.speed = Vector2D(self.body.speed.x, -self.body.speed.y)
+        position = Point2D(
+            max(
+                0 + self.body.shape.radius,
+                min(width - self.body.shape.radius, self.body.position.x),
+            ),
+            max(
+                0 - self.body.shape.radius,
+                min(height - self.body.shape.radius - 1e-10, self.body.position.y),
+            ),
+        )
+        if position != self.body.position:
+            self.body.move_to(position)
+
+    def draw(self, screen):
+        pygame.draw.circle(
+            screen, self.color, self.body.position, self.body.shape.radius, 1
+        )
+
 
 import itertools
 
 area = Rectangle(Point2D(0, height), Point2D(width, 0))
-quadtree = QuadTree(area)
+quadtree = SpatialHash(area)
 world = World(area, quadtree)
 
 circles = []
-radius = 4
-nrows = 10
-nlines = 10
-for row, line in itertools.product(range(nrows), range(nlines)):
-    dx = width / nrows
-    dy = height / nlines
-    center = Point2D(row*dx/2, line*dy/2)
-    circle = Circle(center, radius)
+ncols = 10
+nlines = 5
+w = width / ncols
+h = height / nlines
+for col, line in itertools.product(range(ncols), range(nlines)):
+    center = Point2D((col * w + w / 2), (line * h + h / 2))
+    circle = Circle(center, randint(5, 10))
     circles.append(circle)
 bodies = [
     Body(
         collision_shape=CollisionShape(circle),
-        speed=Vector2D(randint(200, 400), randint(200, 400)),
+        speed=Vector2D(
+            (randint(500, 600) / circle.radius) * (-1) ** randint(0, 1),
+            (randint(500, 600) / circle.radius) * (-1) ** randint(0, 1),
+        ),
+        mass=circle.radius,
     )
     for circle in circles
 ]
 balls = [Ball(body) for body in bodies]
 
-print("INSERTING BODIES INTO QUADTREE")
 for body in bodies:
     quadtree.insert(body)
-print("------------------------------")
 
-
-import sys
-
-import pygame
 
 pygame.init()
 
 
 screen = pygame.display.set_mode((width, height))
-clock = pygame.time.Clock()
-
-
-def draw_quadtree(node):
-    if node.objects:
-        rect = pygame.Rect(
-            node.bounds.top_left.x,
-            node.bounds.top_left.y,
-            node.bounds.bottom_right.x - node.bounds.top_left.x,
-            node.bounds.top_left.y - node.bounds.bottom_right.y,
-        )
-        pygame.draw.rect(screen, (100, 100, 100), rect, 1)
-    for child in node.children:
-        draw_quadtree(child)
 
 
 previous_tick = 0
@@ -96,12 +100,11 @@ while True:
         if event.type == pygame.QUIT:
             sys.exit()
 
+    world.update(delta_time)
     for ball in balls:
         ball.update(delta_time)
-    world.update(delta_time)
 
     screen.fill((0, 0, 0))
-    # draw_quadtree(quadtree.root_node)
-    for body in bodies:
-        pygame.draw.circle(screen, (255, 255, 255), body.position, body.shape.radius, 1)
+    for ball in balls:
+        ball.draw(screen)
     pygame.display.flip()

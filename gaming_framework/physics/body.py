@@ -22,7 +22,7 @@ class Body(QuadTreeObject):
 
     speed: Vector2D = Vector2D(0, 0)
     acceleration: Vector2D = Vector2D(0, 0)
-    mass: float = 0
+    mass: float = 1
 
     is_static: bool = False
     is_tangible: bool = True
