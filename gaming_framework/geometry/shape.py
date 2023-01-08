@@ -37,7 +37,7 @@ class ShapeVisitor:
 
     def accept_polygon(self, polygon: "Polygon"):
         raise NotImplementedError()
-    
+
     def visit(self, shape: "Shape"):
         return shape.accept_shape_visitor(self)
 

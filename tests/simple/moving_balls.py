@@ -54,8 +54,6 @@ class Ball(CollisionHandler):
         )
 
 
-
-
 area = Rectangle(Point2D(0, height), Point2D(width, 0))
 quadtree = SpatialHash(area)
 world = World(area, quadtree)
@@ -63,7 +61,7 @@ world = World(area, quadtree)
 circles = []
 ncols = 6
 nlines = 5
-speed_factor = 1/4
+speed_factor = 1 / 4
 w = width / ncols
 h = height / nlines
 for col, line in itertools.product(range(ncols), range(nlines)):

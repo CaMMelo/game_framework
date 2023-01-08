@@ -23,8 +23,12 @@ class Ball(CollisionHandler):
         self.color = (255, 255, 255)
 
     def resolve_collision_with_wall(self, wall):
-        if (self.body.shape.center.x + self.body.shape.radius) >= wall.body.shape.top_left.x:
-            self.color = (255, 0, 0) if self.color == (255, 255, 255) else (255, 255, 255)
+        if (
+            self.body.shape.center.x + self.body.shape.radius
+        ) >= wall.body.shape.top_left.x:
+            self.color = (
+                (255, 0, 0) if self.color == (255, 255, 255) else (255, 255, 255)
+            )
             self.body.speed = Vector2D(-self.body.speed.x, self.body.speed.y)
 
     def update(self, delta_time):

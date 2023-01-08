@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from gaming_framework.geometry.shape import Rectangle, Shape, ShapeVisitor, Point2D
+
+from gaming_framework.geometry.shape import Point2D, Rectangle, Shape, ShapeVisitor
 from gaming_framework.system.events import EventPublisher
 
 
@@ -139,8 +140,5 @@ class SpatialHash:
     def query(self, shape: Shape):
         hashes = self._hash_visitor.visit(shape)
         yield from (
-            object
-            for hash in hashes
-            if hash in self._map
-            for object in self._map[hash]
+            object for hash in hashes if hash in self._map for object in self._map[hash]
         )
