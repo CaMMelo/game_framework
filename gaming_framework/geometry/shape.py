@@ -23,23 +23,23 @@ from gaming_framework.geometry.collision import (
 
 
 class ShapeVisitor:
-    def accept_point(self, point: "Point2D"):
+    def accept_point(self, point: "Point2D", *args, **kwargs):
         raise NotImplementedError()
 
-    def accept_line(self, line: "Line2D"):
+    def accept_line(self, line: "Line2D", *args, **kwargs):
         raise NotImplementedError()
 
-    def accept_circle(self, circle: "Circle"):
+    def accept_circle(self, circle: "Circle", *args, **kwargs):
         raise NotImplementedError()
 
-    def accept_rectangle(self, rectangle: "Rectangle"):
+    def accept_rectangle(self, rectangle: "Rectangle", *args, **kwargs):
         raise NotImplementedError()
 
-    def accept_polygon(self, polygon: "Polygon"):
+    def accept_polygon(self, polygon: "Polygon", *args, **kwargs):
         raise NotImplementedError()
 
-    def visit(self, shape: "Shape"):
-        return shape.accept_shape_visitor(self)
+    def visit(self, shape: "Shape", *args, **kwargs):
+        return shape.accept_shape_visitor(self, *args, **kwargs)
 
 
 class Shape:
@@ -74,7 +74,7 @@ class Shape:
     def collides_with(self, shape):
         raise NotImplementedError()
 
-    def accept_shape_visitor(self, visitor):
+    def accept_shape_visitor(self, visitor, *args, **kwargs):
         raise NotImplementedError()
 
 
@@ -114,8 +114,8 @@ class Point2D(namedtuple("Point2D", ["x", "y"]), Shape):
     def collides_with(self, shape):
         return shape.point_collision(self)
 
-    def accept_shape_visitor(self, visitor: ShapeVisitor):
-        return visitor.accept_point(self)
+    def accept_shape_visitor(self, visitor: ShapeVisitor, *args, **kwargs):
+        return visitor.accept_point(self, *args, **kwargs)
 
     def distance(self, other):
         return np.linalg.norm(np.array(self - other))
@@ -179,8 +179,8 @@ class Line2D(namedtuple("Line2D", ["a", "b"]), Shape):
     def collides_with(self, shape):
         return shape.line_collision(self)
 
-    def accept_shape_visitor(self, visitor: ShapeVisitor):
-        return visitor.accept_line(self)
+    def accept_shape_visitor(self, visitor: ShapeVisitor, *args, **kwargs):
+        return visitor.accept_line(self, *args, **kwargs)
 
 
 @dataclass
@@ -213,8 +213,8 @@ class Circle(Shape):
     def collides_with(self, shape):
         return shape.circle_collision(self)
 
-    def accept_shape_visitor(self, visitor: ShapeVisitor):
-        return visitor.accept_circle(self)
+    def accept_shape_visitor(self, visitor: ShapeVisitor, *args, **kwargs):
+        return visitor.accept_circle(self, *args, **kwargs)
 
 
 @dataclass
@@ -301,8 +301,8 @@ class Rectangle(Shape):
     def collides_with(self, shape):
         return shape.rectangle_collision(self)
 
-    def accept_shape_visitor(self, visitor: ShapeVisitor):
-        return visitor.accept_rectangle(self)
+    def accept_shape_visitor(self, visitor: ShapeVisitor, *args, **kwargs):
+        return visitor.accept_rectangle(self, *args, **kwargs)
 
 
 @dataclass
@@ -322,8 +322,7 @@ class Polygon(Shape):
         right = max(point.x for point in self.points)
         top_left = Point2D(left, top)
         bottom_right = Point2D(right, bottom)
-        c = top_left + bottom_right
-        center = Point2D(c.x / 2, c.y / 2)
+        center = (top_left + bottom_right).scalar_div(2)
         radius = top_left.distance(bottom_right) / 2
         self._bounding_box = Circle(center, radius)
         return self._bounding_box
@@ -332,7 +331,14 @@ class Polygon(Shape):
     def center(self):
         if self._center is not None:
             return self._center
-        self._center = self.bounding_box.center
+        top = max(point.y for point in self.points)
+        left = min(point.x for point in self.points)
+        bottom = min(point.y for point in self.points)
+        right = max(point.x for point in self.points)
+        top_left = Point2D(left, top)
+        bottom_right = Point2D(right, bottom)
+        center = (top_left + bottom_right).scalar_div(2)
+        self._center = center
         return self._center
 
     @property
@@ -368,5 +374,5 @@ class Polygon(Shape):
     def collides_with(self, shape):
         return shape.polygon_collision(self)
 
-    def accept_shape_visitor(self, visitor: ShapeVisitor):
-        return visitor.accept_polygon(self)
+    def accept_shape_visitor(self, visitor: ShapeVisitor, *args, **kwargs):
+        return visitor.accept_polygon(self, *args, **kwargs)

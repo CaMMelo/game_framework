@@ -13,11 +13,11 @@ from gaming_framework.spatial_structures.spatial_structure import SpatialStructu
 @dataclass
 class World:
     visible_area: Rectangle
-    spatial_hash: SpatialStructure
+    spatial_struct: SpatialStructure
 
     moving_bodies: dict = field(init=False, default_factory=dict)
     sweept_bodies: dict = field(init=False, default_factory=dict)
-    movement_spatial_hash: SpatialStructure = field(init=False, default=None)
+    movement_spatial_struct: SpatialStructure = field(init=False, default=None)
     collision_candidates: list = field(init=False, default_factory=list)
 
     def __hash__(self) -> int:
@@ -83,7 +83,7 @@ class World:
         (_, _, sweept_body) = self.moving_bodies[body]
         del self.moving_bodies[body]
         del self.sweept_bodies[sweept_body]
-        self.movement_spatial_hash.remove(sweept_body)
+        self.movement_spatial_struct.remove(sweept_body)
 
     def __predict_movement(self, body: Body, delta_time: float):
         if body.is_static:
@@ -94,7 +94,7 @@ class World:
         sweept_body = self.__calculate_sweept_body(body, new_pos)
         self.moving_bodies[body] = (body.position, new_pos, sweept_body)
         self.sweept_bodies[sweept_body] = body
-        self.movement_spatial_hash.insert(sweept_body)
+        self.movement_spatial_struct.insert(sweept_body)
 
     def __query_collisions_with_moving_bodies(
         self, body: Body, delta_time: float, start_time: float
@@ -103,7 +103,7 @@ class World:
         pairs = []
         for candidate in (
             BodyPair(body, self.sweept_bodies[sweept_body_b])
-            for sweept_body_b in self.movement_spatial_hash.query(sweept_body.shape)
+            for sweept_body_b in self.movement_spatial_struct.query(sweept_body.shape)
             if (sweept_body != sweept_body_b)
             and (body != self.sweept_bodies[sweept_body_b])
         ):
@@ -118,7 +118,7 @@ class World:
         pairs = []
         for candidate in (
             BodyPair(body, static_body)
-            for static_body in self.spatial_hash.query(sweept_body.shape)
+            for static_body in self.spatial_struct.query(sweept_body.shape)
             if (static_body not in self.moving_bodies)
         ):
             if candidate not in pairs:
@@ -215,14 +215,14 @@ class World:
             current_time += time_of_collision
 
     def get_visible_bodies(self) -> list[Body]:
-        return self.spatial_hash.query(self.visible_area)
+        return self.spatial_struct.query(self.visible_area)
 
     def update(self, delta_time: float):
         self.moving_bodies = {}
         self.sweept_bodies = {}
-        self.movement_spatial_hash = self.spatial_hash.empty_copy()
+        self.movement_spatial_struct = self.spatial_struct.empty_copy()
         self.collision_candidates = []
-        for body in self.spatial_hash.get_objects():
+        for body in self.spatial_struct.get_objects():
             self.__predict_movement(body, delta_time)
         for body in self.moving_bodies:
             self.__update_collision_candidates(body, delta_time, start_time=0)
