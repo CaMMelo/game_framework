@@ -20,13 +20,13 @@ class World:
     movement_spatial_hash: SpatialStructure = field(init=False, default=None)
     collision_candidates: list = field(init=False, default_factory=list)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return id(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return id(self) == id(other)
 
-    def __calculate_sweept_body(self, body: Body, new_pos: Point2D):
+    def __calculate_sweept_body(self, body: Body, new_pos: Point2D) -> Body:
         top = body.bounding_box.center.y + body.bounding_box.radius
         left = body.bounding_box.center.x - body.bounding_box.radius
         bottom = new_pos.center.y - body.bounding_box.radius
@@ -38,7 +38,7 @@ class World:
         sweept_body = Body(collision_shape)
         return sweept_body
 
-    def __time_of_collision(self, body_a: Body, body_b: Body):
+    def __time_of_collision(self, body_a: Body, body_b: Body) -> float:
         distance = (
             body_a.bounding_box.radius**2
             + 2 * body_a.bounding_box.radius * body_b.bounding_box.radius
@@ -77,7 +77,7 @@ class World:
         if 0 <= toc <= (start_time + delta_time):
             heapq.heappush(self.collision_candidates, (toc, pair))
 
-    def __remove_moving_body(self, body):
+    def __remove_moving_body(self, body: Body):
         if body not in self.moving_bodies:
             return
         (_, _, sweept_body) = self.moving_bodies[body]
@@ -85,7 +85,7 @@ class World:
         del self.sweept_bodies[sweept_body]
         self.movement_spatial_hash.remove(sweept_body)
 
-    def __predict_movement(self, body, delta_time):
+    def __predict_movement(self, body: Body, delta_time: float):
         if body.is_static:
             return
         new_pos = body.predict_position(delta_time)
@@ -96,7 +96,9 @@ class World:
         self.sweept_bodies[sweept_body] = body
         self.movement_spatial_hash.insert(sweept_body)
 
-    def __query_collisions_with_moving_bodies(self, body, delta_time, start_time):
+    def __query_collisions_with_moving_bodies(
+        self, body: Body, delta_time: float, start_time: float
+    ):
         (_, _, sweept_body) = self.moving_bodies[body]
         pairs = []
         for candidate in (
@@ -109,7 +111,9 @@ class World:
                 pairs.append(candidate)
                 self.__push_to_collision_candidates(candidate, delta_time, start_time)
 
-    def __query_collisions_with_static_bodies(self, body, delta_time, start_time):
+    def __query_collisions_with_static_bodies(
+        self, body: Body, delta_time: float, start_time: float
+    ):
         (_, _, sweept_body) = self.moving_bodies[body]
         pairs = []
         for candidate in (
@@ -121,13 +125,17 @@ class World:
                 pairs.append(candidate)
                 self.__push_to_collision_candidates(candidate, delta_time, start_time)
 
-    def __update_collision_candidates(self, body, delta_time, start_time):
+    def __update_collision_candidates(
+        self, body: Body, delta_time: float, start_time: float
+    ):
         if body not in self.moving_bodies:
             return
         self.__query_collisions_with_moving_bodies(body, delta_time, start_time)
         self.__query_collisions_with_static_bodies(body, delta_time, start_time)
 
-    def __handle_contact(self, body_a, body_b, current_time, end_time):
+    def __handle_contact(
+        self, body_a: Body, body_b: Body, current_time: float, end_time: float
+    ):
         self.__remove_moving_body(body_a)
         self.__remove_moving_body(body_b)
         remaining_time = end_time - current_time
@@ -176,7 +184,7 @@ class World:
         body_a: Body,
         body_b: Body,
         time_of_collision: float,
-        current_time,
+        current_time: float,
         end_time: float,
     ):
         comparing_shape_a = body_a.shape
@@ -197,7 +205,7 @@ class World:
                 end_time,
             )
 
-    def __detect_collisions(self, delta_time):
+    def __detect_collisions(self, delta_time: float):
         current_time = 0
         while self.collision_candidates:
             time_of_collision, pair = heapq.heappop(self.collision_candidates)
@@ -206,10 +214,10 @@ class World:
             )
             current_time += time_of_collision
 
-    def get_visible_bodies(self):
+    def get_visible_bodies(self) -> list[Body]:
         return self.spatial_hash.query(self.visible_area)
 
-    def update(self, delta_time):
+    def update(self, delta_time: float):
         self.moving_bodies = {}
         self.sweept_bodies = {}
         self.movement_spatial_hash = self.spatial_hash.empty_copy()

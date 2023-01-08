@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from gaming_framework.geometry.shape import Point2D, Rectangle
+from gaming_framework.geometry.shape import Point2D, Rectangle, Shape
 from gaming_framework.spatial_structures.spatial_object import SpatialObject
 from gaming_framework.spatial_structures.spatial_structure import SpatialStructure
 
@@ -19,13 +19,15 @@ class QuadTree(SpatialStructure):
         for object in self.objects:
             self.insert(object)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return id(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return id(self) == id(other)
 
-    def __handle_object_moved_to(self, object, old_pos, new_pos):
+    def __handle_object_moved_to(
+        self, object: SpatialObject, old_pos: Point2D, new_pos: Point2D
+    ):
         if not self.bounds.collides_with(object.bounding_box):
             self.remove(object)
 
@@ -64,7 +66,9 @@ class QuadTree(SpatialStructure):
                 child.insert(object)
         self.objects = []
 
-    def __query_rec(self, shape, found_objects):
+    def __query_rec(
+        self, shape: Shape, found_objects: list[SpatialObject]
+    ) -> list[SpatialObject]:
         if not self.bounds.collides_with(shape):
             return
         found_objects.extend(
@@ -81,10 +85,10 @@ class QuadTree(SpatialStructure):
         )
         yield from found_objects
 
-    def __subscribe_to_object_events(self, object):
+    def __subscribe_to_object_events(self, object: SpatialObject):
         object.subscribe("moved_to", self, self.__handle_object_moved_to)
 
-    def __remove_rec(self, object):
+    def __remove_rec(self, object: SpatialObject) -> bool:
         if object in self.objects:
             object.unsubscribe(self)
             self.objects.remove(object)
@@ -96,7 +100,7 @@ class QuadTree(SpatialStructure):
                 removed = True
         return removed
 
-    def insert(self, object):
+    def insert(self, object: SpatialObject) -> bool:
         if not self.bounds.collides_with(object.bounding_box):
             return False
         if object in self.objects:
@@ -114,7 +118,7 @@ class QuadTree(SpatialStructure):
             self._all_objects.append(object)
         return inserted
 
-    def remove(self, object):
+    def remove(self, object: SpatialObject) -> bool:
         removed = self.__remove_rec(object)
         if removed:
             self._all_objects.remove(object)
@@ -123,10 +127,10 @@ class QuadTree(SpatialStructure):
     def get_objects(self):
         return self._all_objects
 
-    def query(self, shape):
+    def query(self, shape: Shape) -> list[SpatialObject]:
         yield from self.__query_rec(shape, [])
 
-    def empty_copy(self):
+    def empty_copy(self) -> "QuadTree":
         return QuadTree(
             bounds=self.bounds,
             max_objects=self.max_objects,

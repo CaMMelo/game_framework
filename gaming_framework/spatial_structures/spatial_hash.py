@@ -1,6 +1,12 @@
 from dataclasses import dataclass, field
 
-from gaming_framework.geometry.shape import Point2D, Rectangle, Shape, ShapeVisitor
+from gaming_framework.geometry.shape import (
+    Circle,
+    Point2D,
+    Rectangle,
+    Shape,
+    ShapeVisitor,
+)
 from gaming_framework.spatial_structures.spatial_object import SpatialObject
 from gaming_framework.spatial_structures.spatial_structure import SpatialStructure
 
@@ -11,7 +17,7 @@ class ShapeHashVisitor(ShapeVisitor):
     number_of_rows: int
     number_of_lines: int
 
-    def accept_point(self, point):
+    def accept_point(self, point: Point2D) -> tuple[int, int]:
         x = int(
             abs(point.x - self.bounds.top_left.x)
             // (self.bounds.width / self.number_of_rows)
@@ -26,10 +32,7 @@ class ShapeHashVisitor(ShapeVisitor):
             y = -y
         return (x, y)
 
-    def accept_line(self, line):
-        ...
-
-    def accept_circle(self, circle):
+    def accept_circle(self, circle: Circle) -> list[tuple[int, int]]:
         top_left = self.accept_point(
             Point2D(circle.center.x - circle.radius, circle.center.y + circle.radius)
         )
@@ -46,7 +49,7 @@ class ShapeHashVisitor(ShapeVisitor):
             )
         return points
 
-    def accept_rectangle(self, rectangle):
+    def accept_rectangle(self, rectangle: Rectangle) -> list[tuple[int, int]]:
         top_left = self.accept_point(rectangle.top_left)
         bottom_right = self.accept_point(rectangle.bottom_right)
         points = []
@@ -58,9 +61,6 @@ class ShapeHashVisitor(ShapeVisitor):
                 if (row, col) not in points
             )
         return points
-
-    def accept_polygon(self, polygon):
-        ...
 
 
 @dataclass
@@ -95,7 +95,9 @@ class SpatialHash(SpatialStructure):
         if inserted:
             object.subscribe("moved_to", self, self.__handle_object_moved_to)
 
-    def __handle_object_moved_to(self, object: SpatialObject, old_pos, new_pos):
+    def __handle_object_moved_to(
+        self, object: SpatialObject, old_pos: Point2D, new_pos: Point2D
+    ):
         hashes = self._hash_visitor.visit(object.bounding_box)
         object.unsubscribe(self)
         self.__insert_into(object, hashes)
@@ -116,7 +118,7 @@ class SpatialHash(SpatialStructure):
         if removed:
             object.unsubscribe(self)
 
-    def get_objects(self):
+    def get_objects(self) -> list[SpatialObject]:
         objects = []
         objects.extend(
             object
@@ -126,13 +128,13 @@ class SpatialHash(SpatialStructure):
         )
         yield from objects
 
-    def query(self, shape: Shape):
+    def query(self, shape: Shape) -> list[SpatialObject]:
         hashes = self._hash_visitor.visit(shape)
         yield from (
             object for hash in hashes if hash in self._map for object in self._map[hash]
         )
 
-    def empty_copy(self):
+    def empty_copy(self) -> "SpatialHash":
         return SpatialHash(
             bounds=self.bounds,
             number_of_rows=self.number_of_rows,

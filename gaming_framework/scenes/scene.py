@@ -8,7 +8,7 @@ class Scene:
     objects: list[object]
     layers: list[Layer]
 
-    def update(self, delta_time):
+    def update(self, delta_time: float):
         for object in self.objects:
             object.update(delta_time)
 

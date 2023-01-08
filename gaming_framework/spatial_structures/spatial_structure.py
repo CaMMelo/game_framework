@@ -14,6 +14,6 @@ class SpatialStructure:
 
     def query(self, shape: Shape):
         raise NotImplementedError()
-    
+
     def empty_copy(self):
         raise NotImplementedError()
