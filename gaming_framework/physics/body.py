@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 
+from gaming_framework.geometry.shape import Point2D
 from gaming_framework.physics.collision_shape import CollisionShape
-from gaming_framework.physics.quadtree import QuadTreeObject
-from gaming_framework.physics.vector import Vector2D
+from gaming_framework.spatial_structures.spatial_object import SpatialObject
 
 
 class CollisionHandler:
@@ -17,11 +17,11 @@ class CollisionHandler:
 
 
 @dataclass
-class Body(QuadTreeObject):
+class Body(SpatialObject):
     collision_shape: CollisionShape
 
-    speed: Vector2D = Vector2D(0, 0)
-    acceleration: Vector2D = Vector2D(0, 0)
+    speed: Point2D = Point2D(0, 0)
+    acceleration: Point2D = Point2D(0, 0)
     mass: float = 1
 
     is_static: bool = False

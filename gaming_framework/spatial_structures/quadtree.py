@@ -1,30 +1,19 @@
 from dataclasses import dataclass, field
 
 from gaming_framework.geometry.shape import Point2D, Rectangle
-from gaming_framework.system.events import EventPublisher
-
-
-class QuadTreeObject(EventPublisher):
-    def __hash__(self):
-        return id(self)
-
-    def __eq__(self, other):
-        return id(self) == id(other)
-
-    @property
-    def bounding_box(self):
-        raise NotImplementedError()
+from gaming_framework.spatial_structures.spatial_object import SpatialObject
+from gaming_framework.spatial_structures.spatial_structure import SpatialStructure
 
 
 @dataclass
-class QuadTree(EventPublisher):
+class QuadTree(SpatialStructure):
     bounds: Rectangle
     max_objects: int = 4
     depth: int = 0
     max_depth: int = 10
-    objects: list[QuadTreeObject] = field(default_factory=list)
+    objects: list[SpatialObject] = field(default_factory=list)
     children: list["QuadTree"] = field(default_factory=list)
-    _all_objects: list[QuadTreeObject] = field(init=False, default_factory=list)
+    _all_objects: list[SpatialObject] = field(init=False, default_factory=list)
 
     def __post_init__(self):
         for object in self.objects:
@@ -74,8 +63,6 @@ class QuadTree(EventPublisher):
             for child in self.children:
                 child.insert(object)
         self.objects = []
-
-        self.publish("node_divided", self.children)
 
     def __query_rec(self, shape, found_objects):
         if not self.bounds.collides_with(shape):
@@ -130,7 +117,6 @@ class QuadTree(EventPublisher):
     def remove(self, object):
         removed = self.__remove_rec(object)
         if removed:
-            self.publish("object_removed", object)
             self._all_objects.remove(object)
         return removed
 
@@ -139,3 +125,11 @@ class QuadTree(EventPublisher):
 
     def query(self, shape):
         yield from self.__query_rec(shape, [])
+
+    def empty_copy(self):
+        return QuadTree(
+            bounds=self.bounds,
+            max_objects=self.max_objects,
+            depth=self.depth,
+            max_depth=self.max_depth,
+        )

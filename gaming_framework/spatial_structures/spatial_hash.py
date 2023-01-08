@@ -1,19 +1,8 @@
 from dataclasses import dataclass, field
 
 from gaming_framework.geometry.shape import Point2D, Rectangle, Shape, ShapeVisitor
-from gaming_framework.system.events import EventPublisher
-
-
-class SpatialHashObject(EventPublisher):
-    def __hash__(self):
-        return id(self)
-
-    def __eq__(self, other):
-        return id(self) == id(other)
-
-    @property
-    def bounding_box(self) -> Shape:
-        raise NotImplementedError()
+from gaming_framework.spatial_structures.spatial_object import SpatialObject
+from gaming_framework.spatial_structures.spatial_structure import SpatialStructure
 
 
 @dataclass
@@ -75,11 +64,11 @@ class ShapeHashVisitor(ShapeVisitor):
 
 
 @dataclass
-class SpatialHash:
+class SpatialHash(SpatialStructure):
     bounds: Rectangle
     number_of_rows: int = 20
     number_of_lines: int = 20
-    _map: dict[tuple[int, int], list[SpatialHashObject]] = field(
+    _map: dict[tuple[int, int], list[SpatialObject]] = field(
         init=False, default_factory=dict
     )
     _hash_visitor: ShapeHashVisitor = field(init=False)
@@ -95,7 +84,7 @@ class SpatialHash:
     def __eq__(self, other):
         return id(self) == id(other)
 
-    def __insert_into(self, object: SpatialHashObject, hashes):
+    def __insert_into(self, object: SpatialObject, hashes):
         inserted = False
         for hash in hashes:
             if hash not in self._map:
@@ -106,7 +95,7 @@ class SpatialHash:
         if inserted:
             object.subscribe("moved_to", self, self.__handle_object_moved_to)
 
-    def __handle_object_moved_to(self, object: SpatialHashObject, old_pos, new_pos):
+    def __handle_object_moved_to(self, object: SpatialObject, old_pos, new_pos):
         hashes = self._hash_visitor.visit(object.bounding_box)
         object.unsubscribe(self)
         self.__insert_into(object, hashes)
@@ -114,11 +103,11 @@ class SpatialHash:
             if hash not in hashes and object in objects:
                 objects.remove(object)
 
-    def insert(self, object: SpatialHashObject):
+    def insert(self, object: SpatialObject):
         hashes = self._hash_visitor.visit(object.bounding_box)
         self.__insert_into(object, hashes)
 
-    def remove(self, object: SpatialHashObject):
+    def remove(self, object: SpatialObject):
         removed = False
         for objects in self._map.values():
             if object in objects:
@@ -141,4 +130,11 @@ class SpatialHash:
         hashes = self._hash_visitor.visit(shape)
         yield from (
             object for hash in hashes if hash in self._map for object in self._map[hash]
+        )
+
+    def empty_copy(self):
+        return SpatialHash(
+            bounds=self.bounds,
+            number_of_rows=self.number_of_rows,
+            number_of_lines=self.number_of_lines,
         )

@@ -7,17 +7,17 @@ from gaming_framework.geometry.shape import Point2D, Rectangle
 from gaming_framework.physics.body import Body
 from gaming_framework.physics.body_pair import BodyPair
 from gaming_framework.physics.collision_shape import CollisionShape
-from gaming_framework.physics.spatial_hash import SpatialHash
+from gaming_framework.spatial_structures.spatial_structure import SpatialStructure
 
 
 @dataclass
 class World:
     visible_area: Rectangle
-    spatial_hash: SpatialHash
+    spatial_hash: SpatialStructure
 
     moving_bodies: dict = field(init=False, default_factory=dict)
     sweept_bodies: dict = field(init=False, default_factory=dict)
-    movement_spatial_hash: SpatialHash = field(init=False, default=None)
+    movement_spatial_hash: SpatialStructure = field(init=False, default=None)
     collision_candidates: list = field(init=False, default_factory=list)
 
     def __hash__(self):
@@ -70,7 +70,9 @@ class World:
             return 0
         return t1
 
-    def __push_to_collision_candidates(self, pair, delta_time, start_time):
+    def __push_to_collision_candidates(
+        self, pair: BodyPair, delta_time: float, start_time: float
+    ):
         toc = self.__time_of_collision(pair.body_a, pair.body_b)
         if 0 <= toc <= (start_time + delta_time):
             heapq.heappush(self.collision_candidates, (toc, pair))
@@ -210,11 +212,7 @@ class World:
     def update(self, delta_time):
         self.moving_bodies = {}
         self.sweept_bodies = {}
-        self.movement_spatial_hash = SpatialHash(
-            self.spatial_hash.bounds,
-            self.spatial_hash.number_of_rows,
-            self.spatial_hash.number_of_lines,
-        )
+        self.movement_spatial_hash = self.spatial_hash.empty_copy()
         self.collision_candidates = []
         for body in self.spatial_hash.get_objects():
             self.__predict_movement(body, delta_time)

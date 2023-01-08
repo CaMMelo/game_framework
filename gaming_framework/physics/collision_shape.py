@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from gaming_framework.geometry.shape import Point2D, Shape
+from gaming_framework.geometry.shape import Shape
 
 
 @dataclass

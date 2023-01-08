@@ -7,9 +7,8 @@ import pygame
 from gaming_framework.geometry.shape import Circle, Point2D, Rectangle
 from gaming_framework.physics.body import Body, CollisionHandler
 from gaming_framework.physics.collision_shape import CollisionShape
-from gaming_framework.physics.spatial_hash import SpatialHash
-from gaming_framework.physics.vector import Vector2D
 from gaming_framework.physics.world import World
+from gaming_framework.spatial_structures.spatial_hash import SpatialHash
 
 size = width, height = 320, 240
 
@@ -29,7 +28,7 @@ class Ball(CollisionHandler):
             self.color = (
                 (255, 0, 0) if self.color == (255, 255, 255) else (255, 255, 255)
             )
-            self.body.speed = Vector2D(-self.body.speed.x, self.body.speed.y)
+            self.body.speed = Point2D(-self.body.speed.x, self.body.speed.y)
 
     def update(self, delta_time):
         ...
@@ -67,7 +66,7 @@ world = World(area, quadtree)
 
 ball_shape = Circle(Point2D(width / 2, height / 2), 20)
 ball_collision_shape = CollisionShape(ball_shape)
-ball_body = Body(ball_collision_shape, Vector2D(200, 0))
+ball_body = Body(ball_collision_shape, Point2D(200, 0))
 ball = Ball(ball_body)
 
 wall_shape = Rectangle(Point2D(width - 8, height), Point2D(width - 2, 0))
