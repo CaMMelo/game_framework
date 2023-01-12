@@ -1,7 +1,7 @@
 from gaming_framework.geometry.shape import Point2D, Polygon
 from gaming_framework.geometry.collision import point_to_polygon_collision
 import numpy as np
-
+import pytest
 
 def generate_random_polygon(n_points=6, radius=10, convexness=0, center=Point2D(0, 0)):
     points = []
@@ -19,18 +19,36 @@ def generate_random_polygon(n_points=6, radius=10, convexness=0, center=Point2D(
     return polygon
 
 
-def test_point_is_inside_concave_polygon():
+@pytest.mark.parametrize("point", [
+    Point2D(-10, 0),
+    Point2D(-7.5, 0),
+    Point2D(0, 0),
+    Point2D(5, 0),
+    Point2D(9.999, 0),
+    Point2D(0, 8),
+    Point2D(0, 6),
+    Point2D(0, -4),
+    Point2D(0, -8),
+    Point2D(1, 1),
+    Point2D(-1, 1),
+    Point2D(1, -1),
+    Point2D(-1, -1),
+])
+def test_point_is_inside_concave_polygon(point):
     polygon = generate_random_polygon()
-    point = Point2D(-20, 0)
     assert point_to_polygon_collision(point, polygon)
 
 
-# def test_point_is_leftside_concave_polygon():
-#     polygon = generate_random_polygon()
-#     point = (-11, 0)
-#     assert point_to_polygon_collision(point, polygon) == False
-
-# def test_point_is_rightside_concave_polygon():
-#     polygon = generate_random_polygon()
-#     point = (20, 0)
-#     assert point_to_polygon_collision(point, polygon) == False
+@pytest.mark.parametrize("point", [
+    Point2D(-11, 0),
+    Point2D(11, 0),
+    Point2D(0, 9),
+    Point2D(0, -9),
+    Point2D(6, 7),
+    Point2D(6, -7),
+    Point2D(-6, 7),
+    Point2D(-6, -7),
+])
+def test_point_is_outside_concave_polygon(point):
+    polygon = generate_random_polygon()
+    assert point_to_polygon_collision(point, polygon) == False

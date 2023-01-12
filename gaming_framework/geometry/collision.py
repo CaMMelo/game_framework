@@ -27,15 +27,17 @@ def point_to_rectangle_collision(point, rectangle):
 
 
 def point_to_polygon_collision(point, polygon):
-    count = 0
-    lines = []
+    collision = False
     for line in polygon.lines:
-        point_n = line.b - line.a
-        product = point * point_n
-        if product > 0:
-            count += 1
-            lines.append(line)
-    return count % 2 == 1
+        a = (line.a.y > point.y) != (line.b.y > point.y)
+        b = (
+            point.x
+            < (line.b.x - line.a.x) * (point.y - line.a.y) / (line.b.y - line.a.y)
+            + line.a.x
+        )
+        if a and b:
+            collision = not collision
+    return collision
 
 
 def line_to_line_collision(line, other):
