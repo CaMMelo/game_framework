@@ -13,6 +13,7 @@ class QuadTree(SpatialStructure):
     max_depth: int = 10
     objects: list[SpatialObject] = field(default_factory=list)
     children: list["QuadTree"] = field(default_factory=list)
+
     _all_objects: list[SpatialObject] = field(init=False, default_factory=list)
 
     def __post_init__(self):
@@ -24,12 +25,6 @@ class QuadTree(SpatialStructure):
 
     def __eq__(self, other) -> bool:
         return id(self) == id(other)
-
-    def __handle_object_moved_to(
-        self, object: SpatialObject, old_pos: Point2D, new_pos: Point2D
-    ):
-        if not self.bounds.collides_with(object.bounding_box):
-            self.remove(object)
 
     def __divide(self):
         if self.depth > self.max_depth:
@@ -85,9 +80,6 @@ class QuadTree(SpatialStructure):
         )
         yield from found_objects
 
-    def __subscribe_to_object_events(self, object: SpatialObject):
-        object.subscribe("moved_to", self, self.__handle_object_moved_to)
-
     def __remove_rec(self, object: SpatialObject) -> bool:
         if object in self.objects:
             object.unsubscribe(self)
@@ -106,7 +98,6 @@ class QuadTree(SpatialStructure):
         if object in self.objects:
             return False
         if len(self.objects) < self.max_objects:
-            self.__subscribe_to_object_events(object)
             self.objects.append(object)
             self._all_objects.append(object)
             return True
@@ -114,7 +105,6 @@ class QuadTree(SpatialStructure):
             self.__divide()
         inserted = any(child.insert(object) for child in self.children)
         if inserted:
-            self.__subscribe_to_object_events(object)
             self._all_objects.append(object)
         return inserted
 

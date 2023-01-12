@@ -9,7 +9,6 @@ from gaming_framework.geometry.shape import (
 
 
 class CircleBoundingBox(ShapeVisitor):
-    # TODO!!!!: remove object from memory when its not needed anymore
     def __init__(self):
         self.memory = {}
 

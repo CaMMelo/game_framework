@@ -15,10 +15,10 @@ class World:
     visible_area: Rectangle
     spatial_struct: SpatialStructure
 
-    moving_bodies: dict = field(init=False, default_factory=dict)
-    sweept_bodies: dict = field(init=False, default_factory=dict)
-    movement_spatial_struct: SpatialStructure = field(init=False, default=None)
-    collision_candidates: list = field(init=False, default_factory=list)
+    _moving_bodies: dict = field(init=False, default_factory=dict)
+    _sweept_bodies: dict = field(init=False, default_factory=dict)
+    _movement_spatial_struct: SpatialStructure = field(init=False, default=None)
+    _collision_candidates: list = field(init=False, default_factory=list)
 
     def __hash__(self) -> int:
         return id(self)
@@ -75,15 +75,15 @@ class World:
     ):
         toc = self.__time_of_collision(pair.body_a, pair.body_b)
         if 0 <= toc <= (start_time + delta_time):
-            heapq.heappush(self.collision_candidates, (toc, pair))
+            heapq.heappush(self._collision_candidates, (toc, pair))
 
     def __remove_moving_body(self, body: Body):
-        if body not in self.moving_bodies:
+        if body not in self._moving_bodies:
             return
-        (_, _, sweept_body) = self.moving_bodies[body]
-        del self.moving_bodies[body]
-        del self.sweept_bodies[sweept_body]
-        self.movement_spatial_struct.remove(sweept_body)
+        (_, _, sweept_body) = self._moving_bodies[body]
+        del self._moving_bodies[body]
+        del self._sweept_bodies[sweept_body]
+        self._movement_spatial_struct.remove(sweept_body)
 
     def __predict_movement(self, body: Body, delta_time: float):
         if body.is_static:
@@ -92,20 +92,20 @@ class World:
         if new_pos == body.position:
             return
         sweept_body = self.__calculate_sweept_body(body, new_pos)
-        self.moving_bodies[body] = (body.position, new_pos, sweept_body)
-        self.sweept_bodies[sweept_body] = body
-        self.movement_spatial_struct.insert(sweept_body)
+        self._moving_bodies[body] = (body.position, new_pos, sweept_body)
+        self._sweept_bodies[sweept_body] = body
+        self._movement_spatial_struct.insert(sweept_body)
 
     def __query_collisions_with_moving_bodies(
         self, body: Body, delta_time: float, start_time: float
     ):
-        (_, _, sweept_body) = self.moving_bodies[body]
+        (_, _, sweept_body) = self._moving_bodies[body]
         pairs = []
         for candidate in (
-            BodyPair(body, self.sweept_bodies[sweept_body_b])
-            for sweept_body_b in self.movement_spatial_struct.query(sweept_body.shape)
+            BodyPair(body, self._sweept_bodies[sweept_body_b])
+            for sweept_body_b in self._movement_spatial_struct.query(sweept_body.shape)
             if (sweept_body != sweept_body_b)
-            and (body != self.sweept_bodies[sweept_body_b])
+            and (body != self._sweept_bodies[sweept_body_b])
         ):
             if candidate not in pairs:
                 pairs.append(candidate)
@@ -114,12 +114,12 @@ class World:
     def __query_collisions_with_static_bodies(
         self, body: Body, delta_time: float, start_time: float
     ):
-        (_, _, sweept_body) = self.moving_bodies[body]
+        (_, _, sweept_body) = self._moving_bodies[body]
         pairs = []
         for candidate in (
             BodyPair(body, static_body)
             for static_body in self.spatial_struct.query(sweept_body.shape)
-            if (static_body not in self.moving_bodies)
+            if (static_body not in self._moving_bodies)
         ):
             if candidate not in pairs:
                 pairs.append(candidate)
@@ -128,7 +128,7 @@ class World:
     def __update_collision_candidates(
         self, body: Body, delta_time: float, start_time: float
     ):
-        if body not in self.moving_bodies:
+        if body not in self._moving_bodies:
             return
         self.__query_collisions_with_moving_bodies(body, delta_time, start_time)
         self.__query_collisions_with_static_bodies(body, delta_time, start_time)
@@ -189,10 +189,10 @@ class World:
     ):
         comparing_shape_a = body_a.shape
         comparing_shape_b = body_b.shape
-        if body_a in self.moving_bodies and time_of_collision > 0:
+        if body_a in self._moving_bodies and time_of_collision > 0:
             position = body_a.predict_position(time_of_collision)
             comparing_shape_a = body_a.shape.center_to(position)
-        if body_b in self.moving_bodies and time_of_collision > 0:
+        if body_b in self._moving_bodies and time_of_collision > 0:
             position = body_b.predict_position(time_of_collision)
             comparing_shape_b = body_b.shape.center_to(position)
 
@@ -207,8 +207,8 @@ class World:
 
     def __detect_collisions(self, delta_time: float):
         current_time = 0
-        while self.collision_candidates:
-            time_of_collision, pair = heapq.heappop(self.collision_candidates)
+        while self._collision_candidates:
+            time_of_collision, pair = heapq.heappop(self._collision_candidates)
             self.__check_collision(
                 pair.body_a, pair.body_b, time_of_collision, current_time, delta_time
             )
@@ -218,14 +218,14 @@ class World:
         return self.spatial_struct.query(self.visible_area)
 
     def update(self, delta_time: float):
-        self.moving_bodies = {}
-        self.sweept_bodies = {}
-        self.movement_spatial_struct = self.spatial_struct.empty_copy()
-        self.collision_candidates = []
+        self._moving_bodies = {}
+        self._sweept_bodies = {}
+        self._movement_spatial_struct = self.spatial_struct.empty_copy()
+        self._collision_candidates = []
         for body in self.spatial_struct.get_objects():
             self.__predict_movement(body, delta_time)
-        for body in self.moving_bodies:
+        for body in self._moving_bodies:
             self.__update_collision_candidates(body, delta_time, start_time=0)
         self.__detect_collisions(delta_time)
-        for body in self.moving_bodies:
+        for body in self._moving_bodies:
             body.update(delta_time)

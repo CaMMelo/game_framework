@@ -28,11 +28,13 @@ def point_to_rectangle_collision(point, rectangle):
 
 def point_to_polygon_collision(point, polygon):
     count = 0
+    lines = []
     for line in polygon.lines:
-        point_n = np.array(np.array(line.a) - np.array(line.b))
-        product = np.dot(point_n, point)
+        point_n = line.b - line.a
+        product = point * point_n
         if product > 0:
             count += 1
+            lines.append(line)
     return count % 2 == 1
 
 

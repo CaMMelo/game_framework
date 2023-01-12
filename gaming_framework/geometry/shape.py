@@ -85,6 +85,9 @@ class Point2D(namedtuple("Point2D", ["x", "y"]), Shape):
     def __sub__(self, other):
         return Point2D(self.x - other.x, self.y - other.y)
 
+    def __mul__(self, other: "Point2D") -> float:
+        return self.x * other.x + self.y + other.y
+
     @property
     def bounding_box(self):
         return self
@@ -225,6 +228,12 @@ class Rectangle(Shape):
     _lines: list[Line2D] = field(init=False, default=None)
     _points: list[Point2D] = field(init=False, default=None)
     _bounding_box: Circle = field(init=False, default=None)
+
+    def __post_init__(self):
+        if self.top_left.x > self.bottom_right.x:
+            raise ValueError("top_left is right side")
+        if self.top_left.y < self.bottom_right.y:
+            raise ValueError("top_left is bottom side")
 
     @property
     def bounding_box(self):

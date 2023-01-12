@@ -12,7 +12,7 @@ from gaming_framework.spatial_structures.spatial_structure import SpatialStructu
 
 
 @dataclass
-class ShapeHashVisitor(ShapeVisitor):
+class ShapeHash(ShapeVisitor):
     bounds: Rectangle
     number_of_rows: int
     number_of_lines: int
@@ -71,10 +71,10 @@ class SpatialHash(SpatialStructure):
     _map: dict[tuple[int, int], list[SpatialObject]] = field(
         init=False, default_factory=dict
     )
-    _hash_visitor: ShapeHashVisitor = field(init=False)
+    _hash_visitor: ShapeHash = field(init=False)
 
     def __post_init__(self):
-        self._hash_visitor = ShapeHashVisitor(
+        self._hash_visitor = ShapeHash(
             self.bounds, self.number_of_rows, self.number_of_lines
         )
 
@@ -84,26 +84,12 @@ class SpatialHash(SpatialStructure):
     def __eq__(self, other):
         return id(self) == id(other)
 
-    def __insert_into(self, object: SpatialObject, hashes):
-        inserted = False
+    def __insert_into(self, object: SpatialObject, hashes: list[tuple[int, int]]):
         for hash in hashes:
             if hash not in self._map:
                 self._map[hash] = []
             if object not in self._map[hash]:
                 self._map[hash].append(object)
-                inserted = True
-        if inserted:
-            object.subscribe("moved_to", self, self.__handle_object_moved_to)
-
-    def __handle_object_moved_to(
-        self, object: SpatialObject, old_pos: Point2D, new_pos: Point2D
-    ):
-        hashes = self._hash_visitor.visit(object.bounding_box)
-        object.unsubscribe(self)
-        self.__insert_into(object, hashes)
-        for hash, objects in self._map.items():
-            if hash not in hashes and object in objects:
-                objects.remove(object)
 
     def insert(self, object: SpatialObject):
         hashes = self._hash_visitor.visit(object.bounding_box)

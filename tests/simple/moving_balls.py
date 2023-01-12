@@ -9,7 +9,7 @@ from gaming_framework.geometry.shape import Circle, Point2D, Rectangle
 from gaming_framework.physics.body import Body, CollisionHandler
 from gaming_framework.physics.collision_shape import CollisionShape
 from gaming_framework.physics.world import World
-from gaming_framework.spatial_structures.spatial_hash import SpatialHash
+from gaming_framework.spatial_structures.quadtree import QuadTree
 
 size = width, height = 320, 240
 
@@ -54,7 +54,7 @@ class Ball(CollisionHandler):
 
 
 area = Rectangle(Point2D(0, height), Point2D(width, 0))
-quadtree = SpatialHash(area)
+quadtree = QuadTree(area)
 world = World(area, quadtree)
 
 circles = []
